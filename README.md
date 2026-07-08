@@ -24,7 +24,7 @@ git config --global user.name and git config --global user.email
 git add . 
 ```
 ```
-git commit -m "This is commit includesrequirements.txt and readme file"
+git commit -m "comment"
 ```
 ```
 git push origin main
