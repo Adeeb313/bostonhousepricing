@@ -1,0 +1,201 @@
+# ============================================================
+# GitHub Actions Workflow
+# Project : Boston House Price Prediction (Flask + Docker)
+# Purpose : Build, Test and Deploy to Heroku using Docker
+#
+# Official Documentation:
+# GitHub Actions:
+# https://docs.github.com/actions
+#
+# Docker:
+# https://docs.docker.com/
+#
+# Python Setup Action:
+# https://github.com/actions/setup-python
+#
+# Checkout Action:
+# https://github.com/actions/checkout
+#
+# Heroku Container Registry:
+# https://devcenter.heroku.com/articles/container-registry-and-runtime
+# ============================================================
+
+name: CI/CD - Flask Docker Deployment to Heroku
+
+# ------------------------------------------------------------
+# Trigger the workflow
+# ------------------------------------------------------------
+# Runs automatically:
+# 1. Whenever code is pushed to the main branch
+# 2. Whenever a Pull Request is created for main
+# 3. Can also be started manually from GitHub Actions
+# ------------------------------------------------------------
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+
+  # ----------------------------------------------------------
+  # Main CI/CD Job
+  # ----------------------------------------------------------
+
+  build-test-deploy:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    env:
+      PYTHON_VERSION: "3.11"
+
+    steps:
+
+      # ======================================================
+      # STEP 1
+      # Checkout the repository source code.
+      #
+      # Official:
+      # https://github.com/actions/checkout
+      # ======================================================
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ======================================================
+      # STEP 2
+      # Install Python on the GitHub runner.
+      #
+      # Official:
+      # https://github.com/actions/setup-python
+      # ======================================================
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # ======================================================
+      # STEP 3
+      # Upgrade pip to the latest stable version.
+      #
+      # Official:
+      # https://pip.pypa.io/en/stable/
+      # ======================================================
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+
+      # ======================================================
+      # STEP 4
+      # Install all project dependencies listed in
+      # requirements.txt.
+      #
+      # Official:
+      # https://pip.pypa.io/en/stable/reference/requirements-file-format/
+      # ======================================================
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # ======================================================
+      # STEP 5
+      # Verify that app.py has no syntax errors.
+      # This catches coding mistakes before deployment.
+      #
+      # Official:
+      # https://docs.python.org/3/library/py_compile.html
+      # ======================================================
+
+      - name: Check Python Syntax
+        run: |
+          python -m py_compile app.py
+
+      # ======================================================
+      # STEP 6
+      # Build the Docker image.
+      #
+      # Official:
+      # https://docs.docker.com/engine/reference/commandline/build/
+      # ======================================================
+
+      - name: Build Docker Image
+        run: |
+          docker build -t bostonhousepricing .
+
+      # ======================================================
+      # STEP 7
+      # Deploy Docker image to Heroku.
+      #
+      # Required GitHub Secrets:
+      #
+      # HEROKU_EMAIL
+      # HEROKU_API_KEY
+      # HEROKU_APP_NAME
+      #
+      # Official:
+      # https://devcenter.heroku.com/articles/container-registry-and-runtime
+      # ======================================================
+
+      - name: Deploy Docker Container to Heroku
+        if: github.ref == 'refs/heads/main'
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          dockerfile_directory: ./
+          dockerfile_name: Dockerfile
+          docker_options: "--no-cache"
+          process_type: web
+
+      # ======================================================
+      # STEP 8
+      # Display the Docker image that was created.
+      # Useful for debugging.
+      # ======================================================
+
+      - name: Verify Docker Image
+        run: |
+          docker images
+
+      # ======================================================
+      # STEP 9
+      # Print deployment information after a successful run.
+      # ======================================================
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "======================================"
+          echo "Deployment Successful"
+          echo "Application : ${{ secrets.HEROKU_APP_NAME }}"
+          echo "Branch      : ${{ github.ref_name }}"
+          echo "Commit SHA  : ${{ github.sha }}"
+          echo "Triggered By: ${{ github.actor }}"
+          echo "======================================"
+
+      # ======================================================
+      # STEP 10
+      # Print a failure message if any previous step fails.
+      # ======================================================
+
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "======================================"
+          echo "Deployment Failed!"
+          echo "Please review the GitHub Actions logs."
+          echo "======================================"
+          exit 1
