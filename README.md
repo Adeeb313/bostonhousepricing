@@ -5,7 +5,7 @@
 1. [Github Account](http://github.com)
 2. [Heroku Acoount](http://heroku.com)
 3. [VS code IDE](http://code.visualstudio.com)
-4. [Git CLI](https://git-scm.cogit m/book/en/v2/Getting-Started-The-Command-Line)
+4. [Git CLI](https://git-scm.cogitm/book/en/v2/Getting-Started-The-Command-Line)
 
 ### Create a New Environment
 
